@@ -63,6 +63,7 @@ export type BaileysEventMap = {
 
     /** Receive an update on a call, including when the call was received, rejected, accepted */
     'call': WACallEvent[]
+    'outgoing-call': proto.ICallLogRecord
     'labels.edit': Label
     'labels.association': { association: LabelAssociation, type: 'add' | 'remove' }
 }

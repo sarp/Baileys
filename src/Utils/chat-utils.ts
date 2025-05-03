@@ -857,6 +857,10 @@ export const processSyncAction = (
 					labelId: syncAction.index[1]
 				} as MessageLabelAssociation
 		})
+	} else if(action?.callLogAction) {
+		if(action.callLogAction.callLogRecord) {
+			ev.emit('outgoing-call', action.callLogAction.callLogRecord)
+		}
 	} else {
 		logger?.debug({ syncAction, id }, 'unprocessable update')
 	}
