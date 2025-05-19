@@ -171,10 +171,7 @@ const processMessage = async(
 		chat.conversationTimestamp = toNumber(message.messageTimestamp)
 		// only increment unread count if not CIPHERTEXT and from another person
 		if(shouldIncrementChatUnread(message)) {
-			console.log('incrementing unread count', message)
 			chat.unreadCount = (chat.unreadCount || 0) + 1
-		} else {
-			console.log('should not increment unread count', message)
 		}
 	}
 
