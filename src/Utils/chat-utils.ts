@@ -203,25 +203,15 @@ export const decodeSyncdMutations = async(
 		const record = ('record' in msgMutation && !!msgMutation.record) ? msgMutation.record : msgMutation as proto.ISyncdRecord
 
 		const key = await getKey(record.keyId!.id!)
-		console.log('decodeSyncdMutations key', key.valueEncryptionKey.toString('base64'));
 		const content = Buffer.from(record.value!.blob!)
-		console.log('decodeSyncdMutations content', content.toString('base64'));
 		const encContent = content.slice(0, -32)
-		console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
 		const ogValueMac = content.slice(-32)
-		console.log('decodeSyncdMutations ogValueMac', ogValueMac.toString('base64'));
 		if(validateMacs) {
 			const contentHmac = generateMac(operation!, encContent, record.keyId!.id!, key.valueMacKey)
-			console.log('decodeSyncdMutations contentHmac', contentHmac.toString('base64'));
 			if(Buffer.compare(contentHmac, ogValueMac) !== 0) {
-				console.error('decodeSyncdMutations contentHmac', contentHmac.toString('base64'));
-				console.error('decodeSyncdMutations ogValueMac', ogValueMac.toString('base64'));
 				throw new Boom('HMAC content verification failed')
 			}
 		}
-
-		console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
-		console.log('decodeSyncdMutations key.valueEncryptionKey', key.valueEncryptionKey.toString('base64'));
 		const result = aesDecrypt(encContent, key.valueEncryptionKey)
 		const syncAction = proto.SyncActionData.decode(result)
 
