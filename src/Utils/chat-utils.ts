@@ -527,6 +527,7 @@ export const chatModificationToAppPatch = (
 			operation: OP.SET
 		}
 	} else if('archive' in mod) {
+		console.log('archive detected', JSON.stringify(mod.archive, null, 2));
 		patch = {
 			syncAction: {
 				archiveChatAction: {
@@ -540,6 +541,7 @@ export const chatModificationToAppPatch = (
 			operation: OP.SET
 		}
 	} else if('markRead' in mod) {
+		console.log('mark as read detected', JSON.stringify(mod.markRead, null, 2));
 		patch = {
 			syncAction: {
 				markChatAsReadAction: {
@@ -577,6 +579,7 @@ export const chatModificationToAppPatch = (
 			operation: OP.SET
 		}
 	} else if('pin' in mod) {
+		console.log('pin detected', JSON.stringify(mod.pin, null, 2));
 		patch = {
 			syncAction: {
 				pinAction: {
