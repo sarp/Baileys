@@ -71,20 +71,19 @@ const makeLtHashGenerator = ({ indexValueMap, hash }: Pick<LTHashState, 'hash' |
 			const prevOp = indexValueMap[indexMacBase64]
 			if(operation === proto.SyncdMutation.SyncdOperation.REMOVE) {
 				if(!prevOp) {
-					console.log('makeLtHashGenerator indexMac', indexMac);
 					console.log('makeLtHashGenerator indexMacBase64', indexMacBase64);
-					console.log('makeLtHashGenerator valueMac', valueMac);
 					console.log('makeLtHashGenerator valueMacBase64', Buffer.from(valueMac).toString('base64'));
 					console.log('prevOp not found');
-					console.log('indexValueMap keys', Object.keys(indexValueMap));
 					for(const [key, value] of Object.entries(indexValueMap)) {
 						console.log('indexValueMap', key, Buffer.from(value.valueMac).toString('base64'));
 					}
-					throw new Boom('tried remove, but no previous op', { data: { indexMac, valueMac } })
+					//throw new Boom('tried remove, but no previous op', { data: { indexMac, valueMac } })
 				}
 
 				// remove from index value mac, since this mutation is erased
-				delete indexValueMap[indexMacBase64]
+				if(prevOp) {
+					delete indexValueMap[indexMacBase64]
+				}
 			} else {
 				addBuffs.push(new Uint8Array(valueMac).buffer)
 				// add this index into the history map
