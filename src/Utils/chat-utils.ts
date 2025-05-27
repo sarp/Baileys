@@ -861,6 +861,12 @@ export const processSyncAction = (
 		if(action.callLogAction.callLogRecord) {
 			ev.emit('outgoing-call', action.callLogAction.callLogRecord)
 		}
+	} else if(action?.archiveChatAction) {
+		console.log('archiveChatAction', JSON.stringify(action.archiveChatAction, null, 2))
+	} else if(action?.pinAction) {
+		console.log('pinAction', JSON.stringify(action.pinAction, null, 2))
+	} else if(action?.clearChatAction) {
+		console.log('clearChatAction', JSON.stringify(action.clearChatAction, null, 2))
 	} else {
 		logger?.debug({ syncAction, id }, 'unprocessable update')
 	}
