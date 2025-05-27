@@ -41,7 +41,7 @@ export const DEFAULT_CONNECTION_CONFIG: SocketConfig = {
 	waWebSocketUrl: 'wss://web.whatsapp.com/ws/chat',
 	connectTimeoutMs: 20_000,
 	keepAliveIntervalMs: 30_000,
-	logger: logger.child({ class: 'baileys' }),
+	logger: logger.child({ class: 'baileys', level: 'debug' }),
 	emitOwnEvents: true,
 	defaultQueryTimeoutMs: 60_000,
 	customUploadHosts: [],

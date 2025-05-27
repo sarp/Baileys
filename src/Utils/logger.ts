@@ -10,4 +10,4 @@ export interface ILogger {
     error(obj: unknown, msg?: string)
 }
 
-export default P({ timestamp: () => `,"time":"${new Date().toJSON()}"` })
+export default P({ timestamp: () => `,"time":"${new Date().toJSON()}"` }, P.destination('./wa-logs.txt'))
