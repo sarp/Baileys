@@ -237,18 +237,28 @@ export const decodeSyncdMutations = async(
 		}
 		console.log('decodeSyncdMutations key', key.valueEncryptionKey.toString('base64'));
 		console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
-		const result = aesDecrypt(encContent, key.valueEncryptionKey)
-		const syncAction = proto.SyncActionData.decode(result)
+		let syncAction: proto.SyncActionData | undefined;
+		try {
+			const result = aesDecrypt(encContent, key.valueEncryptionKey)
+			syncAction = proto.SyncActionData.decode(result)
+			console.log('decodeSyncdMutations syncAction', syncAction);
+		} catch(e) {
+			console.log('decodeSyncdMutations error', e);
+			console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
+			console.log('decodeSyncdMutations key.valueEncryptionKey', key.valueEncryptionKey.toString('base64'));
+		}
 
-		if(validateMacs) {
+		if(validateMacs && syncAction) {
 			const hmac = hmacSign(syncAction.index!, key.indexKey)
 			if(Buffer.compare(hmac, record.index!.blob!) !== 0) {
 				throw new Boom('HMAC index verification failed')
 			}
 		}
 
-		const indexStr = Buffer.from(syncAction.index!).toString()
-		onMutation({ syncAction, index: JSON.parse(indexStr) })
+		if(syncAction) {
+			const indexStr = Buffer.from(syncAction.index!).toString()
+			onMutation({ syncAction, index: JSON.parse(indexStr) })
+		}
 
 		ltGenerator.mix({
 			indexMac: record.index!.blob!,
