@@ -432,17 +432,17 @@ export const makeChatsSocket = (config: SocketConfig) => {
 					const nodes: BinaryNode[] = []
 
 					for(const name of collectionsToHandle) {
-						console.log('resyncAppState processing collection:', name);
+						logger.debug('resyncAppState processing collection:', name);
 						const result = await authState.keys.get('app-state-sync-version', [name])
 						let state = result[name]
 
 						if(state) {
-							console.log('resyncAppState state found:', state.version);
+							logger.debug('resyncAppState state found:', state.version.toString());
 							if(typeof initialVersionMap[name] === 'undefined') {
 								initialVersionMap[name] = state.version
 							}
 						} else {
-							console.log('resyncAppState state not found, creating new state');
+							logger.debug('resyncAppState state not found, creating new state');
 							state = newLTHashState()
 						}
 
@@ -489,7 +489,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 									snapshot,
 									getAppStateSyncKey,
 									initialVersionMap[name],
-									appStateMacVerification.snapshot
+									appStateMacVerification.snapshot,
+									logger
 								)
 								states[name] = newState
 								Object.assign(globalMutationMap, mutationMap)
@@ -507,8 +508,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 									states[name],
 									getAppStateSyncKey,
 									config.options,
-									initialVersionMap[name],
 									logger,
+									initialVersionMap[name],
 									appStateMacVerification.patch
 								)
 
@@ -697,6 +698,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 							myAppStateKeyId,
 							initial,
 							getAppStateSyncKey,
+							logger
 						)
 						const { patch, state } = encodeResult
 
@@ -747,8 +749,8 @@ export const makeChatsSocket = (config: SocketConfig) => {
 				initial!,
 				getAppStateSyncKey,
 				config.options,
-				undefined,
 				logger,
+				undefined,
 			)
 			for(const key in mutationMap) {
 				onMutation(mutationMap[key])

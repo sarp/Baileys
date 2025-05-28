@@ -60,7 +60,7 @@ const to64BitNetworkOrder = (e: number) => {
 
 type Mac = { indexMac: Uint8Array, valueMac: Uint8Array, operation: proto.SyncdMutation.SyncdOperation }
 
-const makeLtHashGenerator = ({ indexValueMap, hash }: Pick<LTHashState, 'hash' | 'indexValueMap'>) => {
+const makeLtHashGenerator = ({ indexValueMap, hash }: Pick<LTHashState, 'hash' | 'indexValueMap'>, logger: ILogger) => {
 	indexValueMap = { ...indexValueMap }
 	const addBuffs: ArrayBuffer[] = []
 	const subBuffs: ArrayBuffer[] = []
@@ -71,11 +71,12 @@ const makeLtHashGenerator = ({ indexValueMap, hash }: Pick<LTHashState, 'hash' |
 			const prevOp = indexValueMap[indexMacBase64]
 			if(operation === proto.SyncdMutation.SyncdOperation.REMOVE) {
 				if(!prevOp) {
-					console.log('makeLtHashGenerator indexMacBase64', indexMacBase64);
-					console.log('makeLtHashGenerator valueMacBase64', Buffer.from(valueMac).toString('base64'));
-					console.log('prevOp not found');
+					logger.debug(indexMacBase64, 'makeLtHashGenerator indexMacBase64');
+					logger.debug(Buffer.from(valueMac).toString('base64'), 'makeLtHashGenerator valueMacBase64');
+					logger.debug('prevOp not found');
 					for(const [key, value] of Object.entries(indexValueMap)) {
-						console.log('indexValueMap', key, Buffer.from(value.valueMac).toString('base64'));
+						const val = Buffer.from(value.valueMac).toString('base64');
+						logger.debug({key, val}, 'indexValueMap');
 					}
 					//throw new Boom('tried remove, but no previous op', { data: { indexMac, valueMac } })
 				}
@@ -132,7 +133,8 @@ export const encodeSyncdPatch = async(
 	{ type, index, syncAction, apiVersion, operation }: WAPatchCreate,
 	myAppStateKeyId: string,
 	state: LTHashState,
-	getAppStateSyncKey: FetchAppStateSyncKey
+	getAppStateSyncKey: FetchAppStateSyncKey,
+	logger: ILogger
 ) => {
 	const key = !!myAppStateKeyId ? await getAppStateSyncKey(myAppStateKeyId) : undefined
 	if(!key) {
@@ -159,7 +161,7 @@ export const encodeSyncdPatch = async(
 	const indexMac = hmacSign(indexBuffer, keyValue.indexKey)
 
 	// update LT hash
-	const generator = makeLtHashGenerator(state)
+	const generator = makeLtHashGenerator(state, logger)
 	generator.mix({ indexMac, valueMac, operation })
 	Object.assign(state, await generator.finish())
 
@@ -198,27 +200,28 @@ export const decodeSyncdMutations = async(
 	initialState: LTHashState,
 	getAppStateSyncKey: FetchAppStateSyncKey,
 	onMutation: (mutation: ChatMutation) => void,
-	validateMacs: boolean
+	validateMacs: boolean,
+	logger: ILogger
 ) => {
-	console.log('decodeSyncdMutations length', msgMutations.length);
+	logger.debug(msgMutations.length, 'decodeSyncdMutations length');
 	let indexCount = 0;
 	for(const mutation of msgMutations) {
 		indexCount++;
-		console.log('decodeSyncdMutations index', indexCount);
+		logger.debug(indexCount, 'decodeSyncdMutations index');
 		if('operation' in mutation) {
-			console.log('decodeSyncdMutations operation', mutation.operation);
-			console.log('decodeSyncdMutations record', mutation.record?.index?.blob ? Buffer.from(mutation.record.index.blob).toString('base64') : undefined);
-			console.log('decodeSyncdMutations record', mutation.record?.value?.blob ? Buffer.from(mutation.record.value.blob).toString('base64') : undefined);
-			console.log('decodeSyncdMutations record', mutation.record?.keyId?.id ? Buffer.from(mutation.record.keyId.id).toString('base64') : undefined);
+			logger.debug(mutation.operation, 'decodeSyncdMutations operation');
+			logger.debug(mutation.record?.index?.blob ? Buffer.from(mutation.record.index.blob).toString('base64') : undefined, 'decodeSyncdMutations record');
+			logger.debug(mutation.record?.value?.blob ? Buffer.from(mutation.record.value.blob).toString('base64') : undefined, 'decodeSyncdMutations record');
+			logger.debug(mutation.record?.keyId?.id ? Buffer.from(mutation.record.keyId.id).toString('base64') : undefined, 'decodeSyncdMutations record');
 		} else {
 			// print ISyncdRecord
 			const record = mutation as proto.ISyncdRecord;
-			console.log('decodeSyncdMutations record (direct)', record.index?.blob ? Buffer.from(record.index.blob).toString('base64') : undefined);
-			console.log('decodeSyncdMutations record (direct)', record.value?.blob ? Buffer.from(record.value.blob).toString('base64') : undefined);
-			console.log('decodeSyncdMutations record (direct)', record.keyId?.id ? Buffer.from(record.keyId.id).toString('base64') : undefined);
+			logger.debug(record.index?.blob ? Buffer.from(record.index.blob).toString('base64') : undefined, 'decodeSyncdMutations record (direct)');
+			logger.debug(record.value?.blob ? Buffer.from(record.value.blob).toString('base64') : undefined, 'decodeSyncdMutations record (direct)');
+			logger.debug(record.keyId?.id ? Buffer.from(record.keyId.id).toString('base64') : undefined, 'decodeSyncdMutations record (direct)');
 		}
 	}
-	const ltGenerator = makeLtHashGenerator(initialState)
+	const ltGenerator = makeLtHashGenerator(initialState, logger)
 	// indexKey used to HMAC sign record.index.blob
 	// valueEncryptionKey used to AES-256-CBC encrypt record.value.blob[0:-32]
 	// the remaining record.value.blob[0:-32] is the mac, it the HMAC sign of key.keyId + decoded proto data + length of bytes in keyId
@@ -232,8 +235,8 @@ export const decodeSyncdMutations = async(
 		try {
 			key = await getKey(record.keyId!.id!)
 		} catch(e) {
-			console.log('decodeSyncdMutations error', e);
-			console.log('decodeSyncdMutations record.keyId.id', record.keyId?.id ? Buffer.from(record.keyId.id).toString('base64') : undefined);
+			logger.error(e, 'decodeSyncdMutations error');
+			logger.debug(record.keyId?.id ? Buffer.from(record.keyId.id).toString('base64') : undefined, 'decodeSyncdMutations record.keyId.id');
 		}
 
 		const content = Buffer.from(record.value!.blob!)
@@ -251,11 +254,11 @@ export const decodeSyncdMutations = async(
 			try {
 				const result = aesDecrypt(encContent, key.valueEncryptionKey)
 				syncAction = proto.SyncActionData.decode(result)
-				console.log('decodeSyncdMutations syncAction', syncAction);
+				logger.debug(syncAction, 'decodeSyncdMutations syncAction');
 			} catch (e) {
-				console.log('decodeSyncdMutations error', e);
-				console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
-				console.log('decodeSyncdMutations key.valueEncryptionKey', key.valueEncryptionKey.toString('base64'));
+				logger.error(e, 'decodeSyncdMutations error');
+				logger.debug(encContent.toString('base64'), 'decodeSyncdMutations encContent');
+				logger.debug(key.valueEncryptionKey.toString('base64'), 'decodeSyncdMutations key.valueEncryptionKey');
 			}
 		}
 
@@ -297,7 +300,8 @@ export const decodeSyncdPatch = async(
 	initialState: LTHashState,
 	getAppStateSyncKey: FetchAppStateSyncKey,
 	onMutation: (mutation: ChatMutation) => void,
-	validateMacs: boolean
+	validateMacs: boolean,
+	logger: ILogger
 ) => {
 	if(validateMacs) {
 		const base64Key = Buffer.from(msg.keyId!.id!).toString('base64')
@@ -315,7 +319,7 @@ export const decodeSyncdPatch = async(
 		}
 	}
 
-	const result = await decodeSyncdMutations(msg.mutations!, initialState, getAppStateSyncKey, onMutation, validateMacs)
+	const result = await decodeSyncdMutations(msg.mutations!, initialState, getAppStateSyncKey, onMutation, validateMacs, logger)
 	return result
 }
 
@@ -404,7 +408,8 @@ export const decodeSyncdSnapshot = async(
 	snapshot: proto.ISyncdSnapshot,
 	getAppStateSyncKey: FetchAppStateSyncKey,
 	minimumVersionNumber: number | undefined,
-	validateMacs = true
+	validateMacs = true,
+	logger: ILogger
 ) => {
 	console.log('decodeSyncdSnapshot snapshot', name);
 	const newState = newLTHashState()
@@ -424,7 +429,8 @@ export const decodeSyncdSnapshot = async(
 				mutationMap[index!] = mutation
 			}
 			: () => { },
-		validateMacs
+		validateMacs,
+		logger
 	)
 	newState.hash = hash
 	newState.indexValueMap = indexValueMap
@@ -455,8 +461,8 @@ export const decodePatches = async(
 	initial: LTHashState,
 	getAppStateSyncKey: FetchAppStateSyncKey,
 	options: AxiosRequestConfig<{}>,
+	logger: ILogger,
 	minimumVersionNumber?: number,
-	logger?: ILogger,
 	validateMacs = true
 ) => {
 	const newState: LTHashState = {
@@ -491,7 +497,8 @@ export const decodePatches = async(
 					mutationMap[index!] = mutation
 				}
 				: (() => { }),
-			true
+			true,
+			logger
 		)
 
 		newState.hash = decodeResult.hash
@@ -911,10 +918,13 @@ export const processSyncAction = (
 			ev.emit('outgoing-call', action.callLogAction.callLogRecord)
 		}
 	} else if(action?.archiveChatAction) {
+		logger?.debug(JSON.stringify(action.archiveChatAction, null, 2), 'archiveChatAction');
 		console.log('archiveChatAction', JSON.stringify(action.archiveChatAction, null, 2))
 	} else if(action?.pinAction) {
+		logger?.debug(JSON.stringify(action.pinAction, null, 2), 'pinAction');
 		console.log('pinAction', JSON.stringify(action.pinAction, null, 2))
 	} else if(action?.clearChatAction) {
+		logger?.debug(JSON.stringify(action.clearChatAction, null, 2), 'clearChatAction');
 		console.log('clearChatAction', JSON.stringify(action.clearChatAction, null, 2))
 	} else {
 		logger?.debug({ syncAction, id }, 'unprocessable update')
