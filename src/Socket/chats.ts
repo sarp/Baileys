@@ -432,14 +432,17 @@ export const makeChatsSocket = (config: SocketConfig) => {
 					const nodes: BinaryNode[] = []
 
 					for(const name of collectionsToHandle) {
+						console.log('resyncAppState processing collection:', name);
 						const result = await authState.keys.get('app-state-sync-version', [name])
 						let state = result[name]
 
 						if(state) {
+							console.log('resyncAppState state found:', state.version);
 							if(typeof initialVersionMap[name] === 'undefined') {
 								initialVersionMap[name] = state.version
 							}
 						} else {
+							console.log('resyncAppState state not found, creating new state');
 							state = newLTHashState()
 						}
 

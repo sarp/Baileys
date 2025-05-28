@@ -200,6 +200,15 @@ export const decodeSyncdMutations = async(
 	onMutation: (mutation: ChatMutation) => void,
 	validateMacs: boolean
 ) => {
+	console.log('decodeSyncdMutations length', msgMutations.length);
+	for(const mutation of msgMutations) {
+		if('operation' in mutation) {
+			console.log('decodeSyncdMutations operation', mutation.operation);
+			console.log('decodeSyncdMutations record', mutation.record);
+		} else {
+			console.log('decodeSyncdMutations record (direct)', mutation);
+		}
+	}
 	const ltGenerator = makeLtHashGenerator(initialState)
 	// indexKey used to HMAC sign record.index.blob
 	// valueEncryptionKey used to AES-256-CBC encrypt record.value.blob[0:-32]
@@ -220,6 +229,8 @@ export const decodeSyncdMutations = async(
 				throw new Boom('HMAC content verification failed')
 			}
 		}
+		console.log('decodeSyncdMutations key', key.valueEncryptionKey.toString('base64'));
+		console.log('decodeSyncdMutations encContent', encContent.toString('base64'));
 		const result = aesDecrypt(encContent, key.valueEncryptionKey)
 		const syncAction = proto.SyncActionData.decode(result)
 
@@ -368,6 +379,7 @@ export const decodeSyncdSnapshot = async(
 	minimumVersionNumber: number | undefined,
 	validateMacs = true
 ) => {
+	console.log('decodeSyncdSnapshot snapshot', name);
 	const newState = newLTHashState()
 	newState.version = toNumber(snapshot.version!.version)
 
