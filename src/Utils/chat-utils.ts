@@ -204,9 +204,15 @@ export const decodeSyncdMutations = async(
 	for(const mutation of msgMutations) {
 		if('operation' in mutation) {
 			console.log('decodeSyncdMutations operation', mutation.operation);
-			console.log('decodeSyncdMutations record', mutation.record);
+			console.log('decodeSyncdMutations record', mutation.record?.index?.blob ? Buffer.from(mutation.record.index.blob).toString('base64') : undefined);
+			console.log('decodeSyncdMutations record', mutation.record?.value?.blob ? Buffer.from(mutation.record.value.blob).toString('base64') : undefined);
+			console.log('decodeSyncdMutations record', mutation.record?.keyId?.id ? Buffer.from(mutation.record.keyId.id).toString('base64') : undefined);
 		} else {
-			console.log('decodeSyncdMutations record (direct)', mutation);
+			// print ISyncdRecord
+			const record = mutation as proto.ISyncdRecord;
+			console.log('decodeSyncdMutations record (direct)', record.index?.blob ? Buffer.from(record.index.blob).toString('base64') : undefined);
+			console.log('decodeSyncdMutations record (direct)', record.value?.blob ? Buffer.from(record.value.blob).toString('base64') : undefined);
+			console.log('decodeSyncdMutations record (direct)', record.keyId?.id ? Buffer.from(record.keyId.id).toString('base64') : undefined);
 		}
 	}
 	const ltGenerator = makeLtHashGenerator(initialState)
